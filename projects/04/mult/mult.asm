@@ -7,3 +7,42 @@
 // (R0, R1, R2 refer to RAM[0], RAM[1], and RAM[2], respectively.)
 
 // Put your code here.
+
+//initialize R2 to 0
+@R2
+M=0
+
+// initiate i
+@R0
+D=M
+
+@i
+M=D
+
+(LOOP)
+	// terminating condition
+	@i
+	D=M
+	@END
+	D;JEQ
+
+	// add
+	@R1
+	D=M
+
+	@R2
+	M=M+D
+
+	// increment i
+	@i
+	M=M-1
+
+	@LOOP
+	0;JMP
+
+(END)
+	0;JMP
+
+
+
+

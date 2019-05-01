@@ -40,4 +40,57 @@ CHIP CPU {
 
     PARTS:
     // Put your code here:
+    
+    // determine what type of instruction
+    And(a=true, b=instruction[15], out=isInstructionC);
+    Not(in=isInstructionC, out=isInstructionA);
+    
+    // destination bit, matters only for the case of instruction C
+    And(a=instruction[5], b=isInstructionC, out=storeInA);
+    And(a=instruction[4], b=isInstructionC, out=storeInD);
+    And(a=instruction[3], b=isInstructionC, out=writeM);
+    
+    // what goes in the A register ALU output or instruction
+    // only load the instruction into register A if it's instruction A
+    Mux16(a=aluout, b=instruction, sel=isInstructionA, out=registerAInsert);
+    
+    // store in Register A only if destination bit if it's instruction A or destination bit is store in A
+    Or(a=isInstructionA, b=storeInA, out=shouldStoreA);
+    Register(in=registerAInsert, load=shouldStoreA, out=regA, out[0..14]=addressM);
+    
+    // store ALU output in D register?
+    Register(in=aluout, load=storeInD, out=registerD);
+    
+    // what goes in as one of the ALU, either M register or A register, the 12 bit tells you that
+    Mux16(a=regA, b=inM, sel=instruction[12], out=inputALU);
+    
+    // ALU computation
+    ALU(x=registerD, y=inputALU, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6],
+    out=aluout, out=outM, zr=zrout, ng=ngout);
+    
+    
+    // determine jump bit
+    // no jump
+    Not(in=true, out=nojmp);
+    // > 0
+    Not(in=jle, out=jgt);
+    // == 0
+    And(a=true, b=zrout, out=jeq);
+    // >= 0
+    Or(a=zrout, b=jgt, out=jge);
+    // < 0
+    And(a=true, b=ngout, out=jlt);
+    // is not Zero
+    Not(in=zrout, out=jne);
+    // <= 0
+    Or(a=zrout, b=ngout, out=jle);
+    //jump
+    Not(in=false, out=jmp);
+    
+    Mux8Way (a=nojmp, b=jgt, c=jeq, d=jge, e=jlt, f=jne, g=jle, h=jmp, sel=instruction[0..2], out=jumpcond);
+    And(a=isInstructionC, b=jumpcond, out=tojmp);
+    
+    // Program counter
+    Not(in=tojmp, out=notToJmp);
+    PC(in=regA, load=tojmp, inc=notToJmp, reset=reset, out[0..14]=pc);
 }
