@@ -24,9 +24,11 @@ class Parser:
         self.commands = self._get_commands(input_path)
 
     def has_more_commands(self):
+        """Return whether there are more VM commands left to be translated"""
         return self.i < len(self.commands)
 
     def advance(self):
+        """Return the next dictionary parsed VM command"""
         if not self.has_more_commands():
             raise ValueError('No more commands')
         commands = self.commands[self.i].split()

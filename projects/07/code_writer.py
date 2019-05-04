@@ -21,6 +21,12 @@ class CodeWriter:
         self.num_commands_written = 0
 
     def write(self, parsed_command):
+        """
+        Translate the VM command and write Hack assembly code to the output path
+
+        :param parsed_command: dictionary of parsed VM command
+        :return: Nothing, translated Hack assembly code written to output path
+        """
         command_type = parsed_command['command_type']
         if command_type == 'C_ARITHMETIC' and parsed_command['command'] in self.COMP_OPERATOR:
             translated = self._translate_arithmetic_comp(parsed_command)
@@ -39,6 +45,7 @@ class CodeWriter:
                 f.write('\n')
 
     def _translate_push(self, parsed_command):
+        """Translates a push command"""
         translated = self.__resolve_address(parsed_command)
         translated.append('D=M')
         translated.extend(self.__push_d_to_stack())
@@ -50,8 +57,8 @@ class CodeWriter:
         This helper function assigns the right address to the A register depending on the
         segment given in the parsed command
 
-        :param parsed_command:
-        :return:
+        :param parsed_command: dictionary of parsed VM command
+        :return: List, list of translated commands up until the assignment of the right address to register A
         """
         segment = parsed_command['segment']
         index = parsed_command['index']
@@ -103,9 +110,7 @@ class CodeWriter:
 
     @staticmethod
     def __pop_stack_to_d():
-        """
-        Hack Assembly code to pop the top of stack value to the D register
-        """
+        """ Hack Assembly code to pop the top of stack value to the D register"""
         translated = list()
         translated.append('@SP')
         translated.append('M=M-1')
@@ -115,6 +120,7 @@ class CodeWriter:
         return translated
 
     def _translate_pop(self, parsed_command):
+        """Translates a pop command"""
         translated = self.__resolve_address(parsed_command)
         translated.append('D=A')
         translated.append('@R13')
@@ -127,6 +133,7 @@ class CodeWriter:
         return translated
 
     def _translate_arithmetic_nocomp(self, parsed_command):
+        """Translates a arithmetic command that has is no a comparison statement"""
         command = parsed_command['command']
         command_type, operator = self.NON_COMP_OPERATOR[command]
 
@@ -148,6 +155,7 @@ class CodeWriter:
         return translated
 
     def _translate_arithmetic_comp(self, parsed_command):
+        """Translates a arithmetic command that has is a comparison statement"""
         command = parsed_command['command']
         directive = self.COMP_OPERATOR[command]
         translated = list()

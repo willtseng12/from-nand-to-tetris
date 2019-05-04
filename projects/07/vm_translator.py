@@ -6,6 +6,13 @@ class VMTranslator:
 
     @staticmethod
     def translate(input_path, output_path):
+        """
+        Top level function that translates the VM code into Hack assembly code
+
+        :param input_path: String, input path of the vm file
+        :param output_path: String, output path of the translated asm file
+        :return: Nothing, vm file translated
+        """
         parser = Parser(input_path=input_path)
         file_name = input_path.split('/')[-1]
         code_writer = CodeWriter(input_file_name=file_name, output_path=output_path)
