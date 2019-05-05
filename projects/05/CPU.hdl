@@ -56,10 +56,10 @@ CHIP CPU {
     
     // store in Register A only if destination bit if it's instruction A or destination bit is store in A
     Or(a=isInstructionA, b=storeInA, out=shouldStoreA);
-    Register(in=registerAInsert, load=shouldStoreA, out=regA, out[0..14]=addressM);
+    ARegister(in=registerAInsert, load=shouldStoreA, out=regA, out[0..14]=addressM);
     
     // store ALU output in D register?
-    Register(in=aluout, load=storeInD, out=registerD);
+    DRegister(in=aluout, load=storeInD, out=registerD);
     
     // what goes in as one of the ALU, either M register or A register, the 12 bit tells you that
     Mux16(a=regA, b=inM, sel=instruction[12], out=inputALU);
