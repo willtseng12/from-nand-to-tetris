@@ -5,7 +5,7 @@ class CodeWriter:
         'not': ('unary', '!'),
         'neg': ('unary', '-'),
         'add': ('binary', '+'),
-        'sub': ('binary', 'sub')
+        'sub': ('binary', '-')
     }
 
     COMP_OPERATOR = {
@@ -13,6 +13,14 @@ class CodeWriter:
         'gt': 'JGT',
         'lt': 'JLT'
     }
+	
+	KEYWORD_ADDRESS = {
+        'local': 'LCL',
+        'argument': 'ARG',
+        'this': 'THIS',
+        'that': 'THAT',
+        'temp': '5',
+		'pointer': '3'}
 
     def __init__(self, input_file_name, output_path):
         self.file_prefix = input_file_name.split('.')[0]
@@ -47,7 +55,10 @@ class CodeWriter:
     def _translate_push(self, parsed_command):
         """Translates a push command"""
         translated = self.__resolve_address(parsed_command)
-        translated.append('D=M')
+        if parsed_command['segment'] == 'constant':
+            translated.append('D=A')
+        else:
+            translated.append('D=M')
         translated.extend(self.__push_d_to_stack())
 
         return translated
@@ -66,36 +77,19 @@ class CodeWriter:
         if segment in ('local', 'argument', 'this', 'that'):
             translated.append('@{index}'.format(index=index))
             translated.append('D=A')
-            translated.append('@{segment}'.format(segment=segment.upper()))
+            translated.append('@{address}'.format(address=self.KEYWORD_ADDRESS[segment]))
             translated.append('A=M+D')
         elif segment == 'constant':
             translated.append('@{index}'.format(index=index))
         elif segment == 'static':
             translated.append('@{prefix}.{index}'.format(prefix=self.file_prefix, index=index))
-        elif segment == 'temp':
-            translated.append('@{index}'.format(index=index))
-            translated.append('D=M')
-            translated.append('@5')  # temp segment base address starts at 5
-            translated.append('A=A+D')
+        elif segment in ('temp', 'pointer'):
+            translated.append('@R{address}'.format(address=str((int(self.KEYWORD_ADDRESS[segment]) +
+                                                                int(index))))) # Address is an int
         else:
-            converted_parsed_command = self.__convert_pointer(parsed_command)
-            return self.__resolve_address(converted_parsed_command)
+            raise ValueError('segment not recognized: {segment}'.format(segment=segment))
 
         return translated
-
-    @staticmethod
-    def __convert_pointer(parsed_command):
-        """Depending on whether the index is 0 or 1 convert the segment to 'this' or 'that'"""
-        new_parsed_command = parsed_command.copy()
-        if parsed_command['index'] == '0':
-            new_parsed_command['segment'] = 'this'
-        elif parsed_command['index'] == '1':
-            new_parsed_command['segment'] = 'that'
-        else:
-            print(parsed_command['index'])
-            raise ValueError('invalid index for segment pointer')
-
-        return new_parsed_command
 
     @staticmethod
     def __push_d_to_stack():
@@ -149,7 +143,7 @@ class CodeWriter:
         translated.append('M=D')
         translated.extend((self.__pop_stack_to_d()))
         translated.append('@R13')
-        translated.append('D=M{syntax}D'.format(syntax=operator))
+        translated.append('D=D{syntax}M'.format(syntax=operator))
         translated.extend(self.__push_d_to_stack())
 
         return translated
