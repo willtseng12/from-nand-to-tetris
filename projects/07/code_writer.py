@@ -131,12 +131,12 @@ class CodeWriter:
     def _translate_arithmetic_nocomp(self, parsed_command):
         """Translates a arithmetic command that has is no a comparison statement"""
         command = parsed_command['command']
-        command_type, operator = self.NON_COMP_OPERATOR[command]
+        operator_type, operator = self.NON_COMP_OPERATOR[command]
 
         translated = list()
         translated.extend(self.__pop_stack_to_d())
 
-        if command_type == 'unary':
+        if operator_type == 'unary':
             translated.append('D={syntax}D'.format(syntax=operator))
             translated.extend(self.__push_d_to_stack())
             return translated
