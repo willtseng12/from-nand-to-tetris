@@ -13,14 +13,14 @@ class CodeWriter:
         'gt': 'JGT',
         'lt': 'JLT'
     }
-	
-	KEYWORD_ADDRESS = {
+
+    KEYWORD_ADDRESS = {
         'local': 'LCL',
         'argument': 'ARG',
         'this': 'THIS',
         'that': 'THAT',
         'temp': '5',
-		'pointer': '3'}
+        'pointer': '3'}
 
     def __init__(self, input_file_name, output_path):
         self.file_prefix = input_file_name.split('.')[0]
@@ -51,6 +51,8 @@ class CodeWriter:
             for line in translated:
                 f.write(line)
                 f.write('\n')
+
+        self.num_commands_written += 1
 
     def _translate_push(self, parsed_command):
         """Translates a push command"""
@@ -85,7 +87,7 @@ class CodeWriter:
             translated.append('@{prefix}.{index}'.format(prefix=self.file_prefix, index=index))
         elif segment in ('temp', 'pointer'):
             translated.append('@R{address}'.format(address=str((int(self.KEYWORD_ADDRESS[segment]) +
-                                                                int(index))))) # Address is an int
+                                                                int(index)))))  # Address is an int
         else:
             raise ValueError('segment not recognized: {segment}'.format(segment=segment))
 
@@ -158,7 +160,7 @@ class CodeWriter:
         translated.append('M=D')
         translated.extend((self.__pop_stack_to_d()))
         translated.append('@R13')
-        translated.append('D=M-D')
+        translated.append('D=D-M')
         translated.append('@COND_TRUE_{i}'.format(i=self.comp_cond_count))
         translated.append('D;{directive}'.format(directive=directive))
         translated.append('D=0')  # does not satisfy the condition

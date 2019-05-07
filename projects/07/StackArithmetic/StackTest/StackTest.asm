@@ -21,7 +21,7 @@ M=M-1
 A=M
 D=M
 @R13
-D=M-D
+D=D-M
 @COND_TRUE_0
 D;JEQ
 D=0
@@ -61,7 +61,7 @@ M=M-1
 A=M
 D=M
 @R13
-D=M-D
+D=D-M
 @COND_TRUE_1
 D;JEQ
 D=0
@@ -101,7 +101,7 @@ M=M-1
 A=M
 D=M
 @R13
-D=M-D
+D=D-M
 @COND_TRUE_2
 D;JEQ
 D=0
@@ -141,7 +141,7 @@ M=M-1
 A=M
 D=M
 @R13
-D=M-D
+D=D-M
 @COND_TRUE_3
 D;JLT
 D=0
@@ -181,7 +181,7 @@ M=M-1
 A=M
 D=M
 @R13
-D=M-D
+D=D-M
 @COND_TRUE_4
 D;JLT
 D=0
@@ -221,7 +221,7 @@ M=M-1
 A=M
 D=M
 @R13
-D=M-D
+D=D-M
 @COND_TRUE_5
 D;JLT
 D=0
@@ -261,7 +261,7 @@ M=M-1
 A=M
 D=M
 @R13
-D=M-D
+D=D-M
 @COND_TRUE_6
 D;JGT
 D=0
@@ -301,7 +301,7 @@ M=M-1
 A=M
 D=M
 @R13
-D=M-D
+D=D-M
 @COND_TRUE_7
 D;JGT
 D=0
@@ -341,7 +341,7 @@ M=M-1
 A=M
 D=M
 @R13
-D=M-D
+D=D-M
 @COND_TRUE_8
 D;JGT
 D=0
@@ -387,7 +387,7 @@ M=M-1
 A=M
 D=M
 @R13
-D=M+D
+D=D+M
 @SP
 M=M+1
 A=M-1
@@ -409,7 +409,7 @@ M=M-1
 A=M
 D=M
 @R13
-D=M-D
+D=D-M
 @SP
 M=M+1
 A=M-1
@@ -434,7 +434,7 @@ M=M-1
 A=M
 D=M
 @R13
-D=M&D
+D=D&M
 @SP
 M=M+1
 A=M-1
@@ -456,7 +456,7 @@ M=M-1
 A=M
 D=M
 @R13
-D=M|D
+D=D|M
 @SP
 M=M+1
 A=M-1
