@@ -1,0 +1,14 @@
+
+class KeyboardUtil {
+    function int getInputUntilPressed() {
+           var int input;
+           var boolean hasNotPressed;
+           let hasNotPressed = true;
+           while (hasNotPressed) {
+               let input = Keyboard.keyPressed();
+               if (~(input = 0)) {let hasNotPressed = false;}
+           }
+
+           return input;
+       }
+   }

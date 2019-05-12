@@ -1,0 +1,23 @@
+class Main {
+    function void main() {
+        var RockPaperScissorGame game;
+        var char userIntention;
+        var boolean keepGoing;
+        let keepGoing = true;
+        while (keepGoing) {
+            let game = RockPaperScissorGame.new();
+            do game.run();
+
+            do Output.println();
+            do Output.printString("Press 'q' to quit, and any other key to play again");
+            do Sys.wait(600);
+            let userIntention = KeyboardUtil.getInputUntilPressed();
+            if (((userIntention = 81))) { // 'Q'
+                let keepGoing = false;
+            }
+            do Screen.clearScreen();
+            do Output.moveCursor(0, 0);
+        }
+        return;
+    }
+}

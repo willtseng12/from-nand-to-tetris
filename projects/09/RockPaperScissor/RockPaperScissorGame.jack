@@ -1,0 +1,172 @@
+class RockPaperScissorGame {
+   field int rounds;
+   field int roundNum;
+   field int player1Score;
+   field int player2Score;
+   field char player1Move, player2Move;
+
+   /** Constructs a new Rock Paper Scissor Game. */
+   constructor RockPaperScissorGame new() {
+      do Output.printString("Welcome to the game of Rock-Paper-Scissor!");
+      do Output.println();
+      let rounds = 3;
+      let player1Score = 0;
+      let player2Score = 0;
+      do Output.println();
+      do Output.printString("Lets begin!");
+      do Output.println();
+      do Output.println();
+      return this;
+   }
+
+   /** Disposes this game. */
+      method void dispose() {
+         do Memory.deAlloc(this);
+         return;
+      }
+
+   /** Checks whether the user keyboard inputs are valid game choices ('s', 'p', 'r')*/
+   method boolean isValidInput(char input) {
+        if ((input = 80) | (input = 82) | (input = 83)) {return true;}
+        return false;
+   }
+
+   /** Updates the result of a round of game and inform teh players of the result */
+   method void updateResult(int winner, String choice1String, String choice2String) {
+       if (winner = 1) {
+           do Output.printString("Player 1 wins!");
+           do Output.println();
+           do Output.printString(choice1String);
+           do Output.printString(" beats ");
+           do Output.printString(choice2String);
+           let player1Score = player1Score + 1;
+       }
+
+       if (winner = 2) {
+          do Output.printString("Player 2 wins!");
+          do Output.println();
+          do Output.printString(choice1String);
+          do Output.printString(" beats ");
+          do Output.printString(choice2String);
+          let player2Score = player2Score + 1;
+       }
+       return;
+   }
+
+   /** Print the final game results */
+   method void printGameResults() {
+       do Output.println();
+       do Output.println();
+       do Output.printString("*******************");
+       do Output.printString("Overall game results");
+       do Output.printString("*******************");
+       do Output.println();
+       do Output.println();
+       do Output.printString("Player 1 score: ");
+       do Output.printInt(player1Score);
+       do Output.println();
+       do Output.printString("Player 2 score: ");
+       do Output.printInt(player2Score);
+       return;
+   }
+
+   method String convertInputToWord(char c) {
+       if (c = 83) {
+           return "Scissor";
+       }
+
+       if (c = 80) {
+          return "Paper";
+       }
+
+      return "Rock";
+   }
+
+   /** Runs the game: handles the user's inputs and compare their choices accordingly */
+   method void run() {
+      var char player1Choice, player2Choice;
+      var String player1ChoiceString, player2ChoiceString;
+      var boolean isInvalidInput1, isInvalidInput2, goToNextRound;
+      var int outcome;
+      let roundNum = 0;
+
+
+      while (roundNum < rounds) {
+
+        let isInvalidInput1 = true;
+        let isInvalidInput2 = true;
+
+        let player1Choice = 0;
+        let player2Choice = 0;
+
+        let goToNextRound = false;
+
+        do Output.printString("--------");
+        do Output.printString("Round ");
+        do Output.printInt(roundNum + 1);
+
+        do Output.printString("--------");
+        do Output.println();
+
+
+        // getting user 1 input
+        do Output.printString("Player1's turn: Please enter 's' for Scissor, 'r' for Rock, or 'p' for Paper");
+        while (isInvalidInput1) {
+            let player1Choice = KeyboardUtil.getInputUntilPressed();
+            do Sys.wait(300);
+
+            if (isValidInput(player1Choice)) {
+                let isInvalidInput1 = false;
+            }
+        }
+
+        do Output.println();
+        do Output.println();
+
+        // getting user 2 input
+        do Output.printString("Player2's turn: Please enter 's' for Scissor, 'r' for Rock, or 'p' for Paper");
+        while (isInvalidInput2) {
+            let player2Choice = KeyboardUtil.getInputUntilPressed();
+            do Sys.wait(300);
+
+            if (isValidInput(player2Choice)) {
+                let isInvalidInput2 = false;
+            }
+        }
+
+        do Output.println();
+        do Output.println();
+
+        // handle round result
+        let player1ChoiceString = convertInputToWord(player1Choice);
+        let player2ChoiceString = convertInputToWord(player2Choice);
+
+
+        let outcome = ShapeComparer.compare(player1Choice, player2Choice);
+        if (outcome > 0) {
+            do updateResult(outcome, player1ChoiceString, player2ChoiceString);
+        } else {
+            do Output.printString("It's a tie. ");
+            do Output.printString("Both played ");
+            do Output.printString(player2ChoiceString);
+        }
+
+        // post round processing
+        let roundNum = roundNum + 1;
+        do Output.println();
+        if (roundNum < rounds) {
+            do Output.printString("press any keys to start the next round");
+        } else {
+            do Output.printString("press any keys to see overall game result");
+        }
+        while (KeyboardUtil.getInputUntilPressed() = 0) { do Sys.wait(100);}
+        do Screen.clearScreen();
+        do Output.moveCursor(0, 0);
+      }
+
+      do Screen.clearScreen();
+      do Output.moveCursor(0, 0);
+      do printGameResults();
+      return;
+   }
+}

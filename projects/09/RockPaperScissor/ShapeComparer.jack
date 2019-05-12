@@ -1,0 +1,32 @@
+class ShapeComparer {
+
+    /** Compares which shape wins from the comparison. Return 1 if shape 1 wins, 2 if shape 2 wins or 0
+    if it's a tie .*/
+    function int compare(char shape1, char shape2) {
+        if ((shape1 = 80) & (shape2 = 82)) { // paper vs. rock
+            return 1;
+        }
+
+        if ((shape1 = 82) & (shape2 = 80)) { // rock vs. paper
+            return 2;
+        }
+
+        if ((shape1 = 83) & (shape2 = 82)) { // scissor vs. rock
+            return 2;
+        }
+
+        if ((shape1 = 82) & (shape2 = 83)) { // rock vs. scissor
+            return 1;
+        }
+
+        if ((shape1 = 80) & (shape2 = 83)) { // paper vs. scissor
+            return 2;
+        }
+
+        if ((shape1 = 83) & (shape2 = 80)) { // scissor vs. paper
+            return 1;
+        }
+
+        return 0;
+    }
+}

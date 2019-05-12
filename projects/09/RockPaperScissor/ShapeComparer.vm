@@ -1,0 +1,81 @@
+function ShapeComparer.compare 0
+push argument 0
+push constant 80
+eq
+push argument 1
+push constant 82
+eq
+and
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push constant 1
+return
+label IF_FALSE0
+push argument 0
+push constant 82
+eq
+push argument 1
+push constant 80
+eq
+and
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
+push constant 2
+return
+label IF_FALSE1
+push argument 0
+push constant 83
+eq
+push argument 1
+push constant 82
+eq
+and
+if-goto IF_TRUE2
+goto IF_FALSE2
+label IF_TRUE2
+push constant 2
+return
+label IF_FALSE2
+push argument 0
+push constant 82
+eq
+push argument 1
+push constant 83
+eq
+and
+if-goto IF_TRUE3
+goto IF_FALSE3
+label IF_TRUE3
+push constant 1
+return
+label IF_FALSE3
+push argument 0
+push constant 80
+eq
+push argument 1
+push constant 83
+eq
+and
+if-goto IF_TRUE4
+goto IF_FALSE4
+label IF_TRUE4
+push constant 2
+return
+label IF_FALSE4
+push argument 0
+push constant 83
+eq
+push argument 1
+push constant 80
+eq
+and
+if-goto IF_TRUE5
+goto IF_FALSE5
+label IF_TRUE5
+push constant 1
+return
+label IF_FALSE5
+push constant 0
+return
