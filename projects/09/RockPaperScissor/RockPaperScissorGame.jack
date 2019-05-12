@@ -45,9 +45,9 @@ class RockPaperScissorGame {
        if (winner = 2) {
           do Output.printString("Player 2 wins!");
           do Output.println();
-          do Output.printString(choice1String);
-          do Output.printString(" beats ");
           do Output.printString(choice2String);
+          do Output.printString(" beats ");
+          do Output.printString(choice1String);
           let player2Score = player2Score + 1;
        }
        return;

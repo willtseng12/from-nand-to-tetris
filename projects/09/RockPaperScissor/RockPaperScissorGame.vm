@@ -275,7 +275,7 @@ call Output.printString 1
 pop temp 0
 call Output.println 0
 pop temp 0
-push argument 2
+push argument 3
 call Output.printString 1
 pop temp 0
 push constant 7
@@ -296,7 +296,7 @@ push constant 32
 call String.appendChar 2
 call Output.printString 1
 pop temp 0
-push argument 3
+push argument 2
 call Output.printString 1
 pop temp 0
 push this 3
