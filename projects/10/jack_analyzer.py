@@ -41,6 +41,8 @@ class JackTokenizer:
                     'while': 'WHILE',
                     'return': 'RETURN'}
 
+    JACK_OPERATOR = {'+', '-', '*', '/', '&', '|', '<', '>', '='}
+
     def __init__(self, file_path):
         self.jack_content = self._load_file(file_path)
         self.current_pointer = 0
@@ -298,6 +300,7 @@ class CompilationEngine:
                                                                 type=self.tokenizer.token_type()))
         self.tokenizer.advance()
         self.compile_var_dec()
+        self.compile_statements()
 
     def compile_var_dec(self):
         while self.tokenizer.symbol() == 'var':
@@ -344,13 +347,57 @@ class CompilationEngine:
             self.writer.write(self.indent + '</varDec>\n')
 
     def compile_statements(self):
-        pass
+        self.writer.write(self.indent + '<statements>\n')
+        self.updent()
+        while self.tokenizer.key_word() in ('let', 'if', 'while', 'do', 'return'):
+
+            if self.tokenizer.key_word() == 'let':
+                self.compile_let()
 
     def compile_do(self):
         pass
 
     def compile_let(self):
-        pass
+        self.writer.write(self.indent + '<letStatement>\n')
+        self.updent()
+
+        # let
+        self.check_required_token(self.tokenizer.key_word(), 'let')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        # identifier
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        # array case
+        if self.tokenizer.symbol() == '[':
+            self.writer.write(self.indent +
+                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
+                                                                    type=self.tokenizer.token_type()))
+            self.tokenizer.advance()
+
+            self.compile_expression()
+
+            self.check_required_token(self.tokenizer.key_word(), ']')
+            self.writer.write(self.indent +
+                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
+                                                                    type=self.tokenizer.token_type()))
+            self.tokenizer.advance()
+
+        # =
+        self.check_required_token(self.tokenizer.key_word(), '=')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        # rhs equality
+        self.compile_expression()
 
     def compile_while(self):
         pass
@@ -362,13 +409,74 @@ class CompilationEngine:
         pass
 
     def compile_expression(self):
-        pass
+        self.writer.write(self.indent + '<expression>\n')
+        self.updent()
+
+        self.compile_term()
 
     def compile_term(self):
-        pass
+        self.writer.write(self.indent + '<term>\n')
+        self.updent()
+
+        # "(" expression ")" case
+        if self.tokenizer.symbol() == '(':
+            self.writer.write(self.indent +
+                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                    type=self.tokenizer.token_type()))
+            self.tokenizer.advance()
+            self.compile_term()
+            self.check_required_token(self.tokenizer.key_word(), ')')
+            self.writer.write(self.indent +
+                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                    type=self.tokenizer.token_type()))
+            self.tokenizer.advance()
+
+        # unary op term case
+        elif self.tokenizer.symbol() == '-':
+            self.writer.write(self.indent +
+                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                    type=self.tokenizer.token_type()))
+            self.tokenizer.advance()
+            self.compile_term()
+
+        # a constant, subroutine call, or array access
+        # need to look ahead 1
+        else:
+            current_token, current_token_type = self.tokenizer.identifier(), self.tokenizer.token_type()
+            self.tokenizer.advance()
+
+            # subroutine call
+            if self.tokenizer.symbol() == '(':
+                self._compile_subroutine_call(previous_token=current_token,
+                                              previous_token_type=current_token_type)
+            self.writer.write(self.indent +
+                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
+                                                                    type=self.tokenizer.token_type()))
+            self.tokenizer.advance()
+
+
+
+
+
 
     def compile_expression_list(self):
         pass
+
+    def _compile_subroutine_call(self, previous_token, previous_token_type):
+        # identifier
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=previous_token,
+                                                                type=previous_token_type))
+        self.tokenizer.advance()
+
+        # (
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+        self.compile_expression_list()
+
+
 
     @staticmethod
     def check_required_token(token, required_token):
