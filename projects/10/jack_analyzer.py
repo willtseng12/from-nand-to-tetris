@@ -391,6 +391,9 @@ class CompilationEngine:
             elif self.tokenizer.key_word() == 'if':
                 self.compile_if()
 
+            elif self.tokenizer.key_word() == 'while':
+                self.compile_while()
+
         self.downdent()
         self.writer.write(self.indent + '</statements>\n')
 
@@ -666,14 +669,13 @@ class CompilationEngine:
         else:
             current_token, current_token_type = self.tokenizer.identifier(), self.tokenizer.token_type()
             self.tokenizer.advance()
-
             # subroutine call
             if self.tokenizer.symbol() in ('(', '.'):
                 self._compile_subroutine_call(previous_token=current_token,
                                               previous_token_type=current_token_type)
 
             # array access
-            elif self.tokenizer.symbol == '[':
+            elif self.tokenizer.symbol() == '[':
                 # array var name
                 self.writer.write(self.indent +
                                   '<{type}> {token} </{type}>\n'.format(token=current_token,
@@ -819,7 +821,8 @@ class CompilationEngine:
 
 
 if __name__ == '__main__':
-    tokenizer = JackTokenizer('Square/Square.jack')
+    # testing
+    tokenizer = JackTokenizer('ArrayTest/Main.jack')
     compilation_engine = CompilationEngine(tokenizer, 'test_name.xml')
     compilation_engine.compile()
     # while tokenizer.has_more_tokens():
