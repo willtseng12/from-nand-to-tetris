@@ -172,8 +172,10 @@ class CompilationEngine:
 
     def compile_class(self):
         self.tokenizer.advance()
+
         self.writer.write('<class>\n')
         self.updent()
+
         self.check_required_token(self.tokenizer.key_word(), 'class')
         self.writer.write(self.indent +
                           '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
@@ -189,19 +191,38 @@ class CompilationEngine:
         self.writer.write(self.indent +
                           '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
                                                                 type=self.tokenizer.token_type()))
-        self.compile_class_var_dec()
-        self.compile_subroutine_dec()
+        self.tokenizer.advance()
+        while self.tokenizer.symbol() in ('field', 'static'):
+            self.compile_class_var_dec()
+        while self.tokenizer.key_word() in ('constructor', 'function', 'method'):
+            self.compile_subroutine_dec()
+
+        self.check_required_token(self.tokenizer.key_word(), '}')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.downdent()
+        self.writer.write('</class>\n')
 
     def compile_class_var_dec(self):
+
+        self.writer.write(self.indent + '<classVarDec>\n')
+        self.updent()
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
+                                                                type=self.tokenizer.token_type()))
+
         self.tokenizer.advance()
 
-        while self.tokenizer.symbol() in ('field', 'static'):
-            self.writer.write(self.indent + '<classVarDec>\n')
-            self.updent()
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
+        while self.tokenizer.symbol() == ',':
             self.writer.write(self.indent +
                               '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
                                                                     type=self.tokenizer.token_type()))
@@ -209,67 +230,56 @@ class CompilationEngine:
             self.writer.write(self.indent +
                               '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
                                                                     type=self.tokenizer.token_type()))
-
             self.tokenizer.advance()
 
-            while self.tokenizer.symbol() == ',':
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                        type=self.tokenizer.token_type()))
-                self.tokenizer.advance()
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                        type=self.tokenizer.token_type()))
-                self.tokenizer.advance()
+        # ;
+        self.check_required_token(self.tokenizer.symbol(), ';')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
 
-            # ;
-            self.check_required_token(self.tokenizer.symbol(), ';')
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
-
-            self.downdent()
-            self.writer.write(self.indent + '</classVarDec>\n')
+        self.downdent()
+        self.writer.write(self.indent + '</classVarDec>\n')
 
     def compile_subroutine_dec(self):
-        while self.tokenizer.key_word() in ('constructor', 'function', 'method'):
-            self.writer.write(self.indent + '<subroutineDec>\n')
-            self.updent()
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
-            # return type
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
 
-            # subroutine name
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
+        self.writer.write(self.indent + '<subroutineDec>\n')
+        self.updent()
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+        # return type
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
 
-            self.check_required_token(self.tokenizer.key_word(), '(')
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
+        # subroutine name
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
 
-            self.compile_parameter_list()
+        self.check_required_token(self.tokenizer.key_word(), '(')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
 
-            self.check_required_token(self.tokenizer.key_word(), ')')
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
+        self.compile_parameter_list()
 
-            self.compile_subroutine_body()
+        self.check_required_token(self.tokenizer.key_word(), ')')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
 
-            self.downdent()
-            self.writer.write(self.indent + '</subroutineDec>\n')
+        self.compile_subroutine_body()
+
+        self.downdent()
+        self.writer.write(self.indent + '</subroutineDec>\n')
 
     def compile_parameter_list(self):
         self.writer.write(self.indent + '<parameterList>\n')
@@ -307,63 +317,82 @@ class CompilationEngine:
                           '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
                                                                 type=self.tokenizer.token_type()))
         self.tokenizer.advance()
-        self.compile_var_dec()
+        while self.tokenizer.symbol() == 'var':
+            self.compile_var_dec()
         self.compile_statements()
 
+        # }
+        self.check_required_token(self.tokenizer.symbol(), '}')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        self.downdent()
+        self.writer.write(self.indent + '</subroutineBody>\n')
+
     def compile_var_dec(self):
-        while self.tokenizer.symbol() == 'var':
-            self.writer.write(self.indent + '<varDec>\n')
-            self.updent()
 
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
+        self.writer.write(self.indent + '<varDec>\n')
+        self.updent()
 
-            # local variable type
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        # local variable type
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+
+        self.tokenizer.advance()
+
+        # local variable name
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        # potentially additional variable name
+        while self.tokenizer.symbol() == ',':
             self.writer.write(self.indent +
                               '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
                                                                     type=self.tokenizer.token_type()))
-
             self.tokenizer.advance()
-
-            # local variable name
             self.writer.write(self.indent +
                               '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
                                                                     type=self.tokenizer.token_type()))
             self.tokenizer.advance()
 
-            # potentially additional variable name
-            while self.tokenizer.symbol() == ',':
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                        type=self.tokenizer.token_type()))
-                self.tokenizer.advance()
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                        type=self.tokenizer.token_type()))
-                self.tokenizer.advance()
+        # ;
+        self.check_required_token(self.tokenizer.symbol(), ';')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
 
-            # ;
-            self.check_required_token(self.tokenizer.symbol(), ';')
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
-
-            self.downdent()
-            self.writer.write(self.indent + '</varDec>\n')
+        self.downdent()
+        self.writer.write(self.indent + '</varDec>\n')
 
     def compile_statements(self):
         self.writer.write(self.indent + '<statements>\n')
         self.updent()
         while self.tokenizer.key_word() in ('let', 'if', 'while', 'do', 'return'):
-
             if self.tokenizer.key_word() == 'let':
                 self.compile_let()
 
             elif self.tokenizer.key_word() == 'do':
                 self.compile_do()
+
+            elif self.tokenizer.key_word() == 'return':
+                self.compile_return()
+
+            elif self.tokenizer.key_word() == 'if':
+                self.compile_if()
+
+        self.downdent()
+        self.writer.write(self.indent + '</statements>\n')
 
     def compile_do(self):
         self.writer.write(self.indent + '<doStatement>\n')
@@ -376,8 +405,6 @@ class CompilationEngine:
 
         current_token, current_token_type = self.tokenizer.identifier(), self.tokenizer.token_type()
         self.tokenizer.advance()
-
-        # print(self.tokenizer.symbol())
 
         self._compile_subroutine_call(previous_token=current_token,
                                       previous_token_type=current_token_type)
@@ -444,15 +471,143 @@ class CompilationEngine:
         self.downdent()
         self.writer.write(self.indent + '</letStatement>\n')
 
-
     def compile_while(self):
-        pass
+        self.writer.write(self.indent + '<whileStatement>\n')
+        self.updent()
+
+        # while
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        # (
+        self.check_required_token(self.tokenizer.key_word(), '(')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        self.compile_expression()
+
+        # )
+        self.check_required_token(self.tokenizer.key_word(), ')')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        # {
+        self.check_required_token(self.tokenizer.key_word(), '{')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        self.compile_statements()
+
+        # }
+        self.check_required_token(self.tokenizer.key_word(), '}')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        self.downdent()
+        self.writer.write(self.indent + '</whileStatement>\n')
 
     def compile_return(self):
-        pass
+        self.writer.write(self.indent + '<returnStatement>\n')
+        self.updent()
+
+        # return
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        if self.tokenizer.symbol() != ';':
+            self.compile_expression()
+
+            # ;
+            self.check_required_token(self.tokenizer.key_word(), ';')
+            self.writer.write(self.indent +
+                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                    type=self.tokenizer.token_type()))
+            self.tokenizer.advance()
+
+        else:
+            self.writer.write(self.indent +
+                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                    type=self.tokenizer.token_type()))
+            self.tokenizer.advance()
+
+        self.downdent()
+        self.writer.write(self.indent + '</returnStatement>\n')
 
     def compile_if(self):
-        pass
+        self.writer.write(self.indent + '<ifStatement>\n')
+        self.updent()
+
+        # if
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        self.check_required_token(self.tokenizer.key_word(), '(')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        self.compile_expression()
+
+        self.check_required_token(self.tokenizer.key_word(), ')')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        # {
+
+        self.check_required_token(self.tokenizer.key_word(), '{')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        self.compile_statements()
+
+        self.check_required_token(self.tokenizer.key_word(), '}')
+        self.writer.write(self.indent +
+                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()
+
+        # else?
+        if self.tokenizer.key_word() == 'else':
+            self.writer.write(self.indent +
+                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                    type=self.tokenizer.token_type()))
+            self.tokenizer.advance()
+
+            self.check_required_token(self.tokenizer.key_word(), '{')
+            self.writer.write(self.indent +
+                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                    type=self.tokenizer.token_type()))
+            self.tokenizer.advance()
+
+            self.compile_statements()
+
+            self.check_required_token(self.tokenizer.key_word(), '}')
+            self.writer.write(self.indent +
+                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                                                                    type=self.tokenizer.token_type()))
+            self.tokenizer.advance()
+
+        self.downdent()
+        self.writer.write(self.indent + '</ifStatement>\n')
 
     def compile_expression(self):
 
@@ -491,7 +646,7 @@ class CompilationEngine:
                               '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
                                                                     type=self.tokenizer.token_type()))
             self.tokenizer.advance()
-            self.compile_term()
+            self.compile_expression()
             self.check_required_token(self.tokenizer.key_word(), ')')
             self.writer.write(self.indent +
                               '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
@@ -565,10 +720,8 @@ class CompilationEngine:
                                   '<{type}> {token} </{type}>\n'.format(token=current_token,
                                                                         type=current_token_type))
             elif current_token == ')':
-                print('hi')
                 self.encounter_empty_expression_list = True
                 return
-
 
         self.downdent()
         self.writer.write(self.indent + '</term>\n')
@@ -581,7 +734,6 @@ class CompilationEngine:
 
         while self.tokenizer.symbol() == ',':
             # evidently false if there are more
-            self.encounter_empty_expression_list = False
             self.writer.write(self.indent +
                               '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
                                                                     type=self.tokenizer.token_type()))
@@ -596,7 +748,6 @@ class CompilationEngine:
         self.writer.write(self.indent +
                           '<{type}> {token} </{type}>\n'.format(token=previous_token,
                                                                 type=previous_token_type))
-        # self.tokenizer.advance()
 
         # method
         if self.tokenizer.symbol() == '(':
@@ -609,10 +760,11 @@ class CompilationEngine:
             self.compile_expression_list()
 
             if self.encounter_empty_expression_list:
-                print(self.encounter_empty_expression_list)
                 self.writer.write(self.indent +
                                   '<{type}> {token} </{type}>\n'.format(token=')',
                                                                         type='symbol'))
+                self.encounter_empty_expression_list = False
+
             else:
                 self.check_required_token(self.tokenizer.key_word(), ')')
                 self.writer.write(self.indent +
@@ -643,10 +795,10 @@ class CompilationEngine:
             self.compile_expression_list()
 
             if self.encounter_empty_expression_list:
-                print(self.encounter_empty_expression_list)
                 self.writer.write(self.indent +
                                   '<{type}> {token} </{type}>\n'.format(token=')',
                                                                         type='symbol'))
+                self.encounter_empty_expression_list = False
             else:
                 self.check_required_token(self.tokenizer.key_word(), ')')
                 self.writer.write(self.indent +
