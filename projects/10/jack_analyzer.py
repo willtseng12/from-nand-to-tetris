@@ -89,6 +89,12 @@ class JackTokenizer:
         return {'+', '-', '*', '/', '&', '|', '<', '>', '='}
 
     @staticmethod
+    def convert_operator(symbol):
+        return {'>': '&gt',
+                '<': '&lt',
+                '&': '&amp'}[symbol]
+
+    @staticmethod
     def jack_keyword():
         return {'class': 'CLASS',
                 'constructor': 'CONSTRUCTOR',
@@ -625,8 +631,12 @@ class CompilationEngine:
 
         # (operator term)*
         while self.tokenizer.symbol() in self.tokenizer.jack_operator():
+            if self.tokenizer.symbol() in ('>', '<', '&'):
+                converted_symbol = JackTokenizer.convert_operator(self.tokenizer.symbol())
+            else:
+                converted_symbol = self.tokenizer.symbol()
             self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
+                              '<{type}> {token} </{type}>\n'.format(token=converted_symbol,
                                                                     type=self.tokenizer.token_type()))
             self.tokenizer.advance()
 
@@ -822,7 +832,7 @@ class CompilationEngine:
 
 if __name__ == '__main__':
     # testing
-    tokenizer = JackTokenizer('ArrayTest/Main.jack')
+    tokenizer = JackTokenizer('Square/Square.jack')
     compilation_engine = CompilationEngine(tokenizer, 'test_name.xml')
     compilation_engine.compile()
     # while tokenizer.has_more_tokens():
