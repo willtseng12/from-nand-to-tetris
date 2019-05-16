@@ -1,3 +1,9 @@
+
+// Rocker paper scissor is a two player game.
+// Player 1 and player 2 take turns playing their move.
+// After 3 games the overall game result is shown.
+// The players will have the option to restart teh game or quit.
+// This Main class is the main entry point of the game.
 class Main {
     function void main() {
         var RockPaperScissorGame game;

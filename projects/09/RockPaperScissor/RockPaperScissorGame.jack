@@ -70,6 +70,7 @@ class RockPaperScissorGame {
        return;
    }
 
+   /** this is a helper method that convert keyboard input key integer to their corresponding choice in string */
    method String convertInputToWord(char c) {
        if (c = 83) {
            return "Scissor";
