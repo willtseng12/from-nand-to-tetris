@@ -90,9 +90,9 @@ class JackTokenizer:
 
     @staticmethod
     def convert_operator(symbol):
-        return {'>': '&gt',
-                '<': '&lt',
-                '&': '&amp'}[symbol]
+        return {'>': '&gt;',
+                '<': '&lt;',
+                '&': '&amp;'}[symbol]
 
     @staticmethod
     def jack_keyword():
@@ -831,10 +831,22 @@ class CompilationEngine:
 
 
 if __name__ == '__main__':
-    # testing
-    tokenizer = JackTokenizer('Square/Square.jack')
-    compilation_engine = CompilationEngine(tokenizer, 'test_name.xml')
-    compilation_engine.compile()
-    # while tokenizer.has_more_tokens():
-    #     tokenizer.advance()
-    #     print(tokenizer.identifier())
+    import sys
+    import os
+
+    cur_dir = os.getcwd()
+    file_path = sys.argv[1]
+
+    if '.jack' in file_path:
+        tokenizer = JackTokenizer(file_path)
+        compilation_engine = CompilationEngine(tokenizer, file_path.split('.')[0] + '.xml')
+        compilation_engine.compile()
+    else:
+        files = os.listdir(file_path)
+        files = [file for file in files if '.jack' in file]
+        os.chdir(file_path)
+        for file in files:
+            tokenizer = JackTokenizer(file)
+            compilation_engine = CompilationEngine(tokenizer, file.split('.')[0] + '.xml')
+            compilation_engine.compile()
+        os.chdir(cur_dir)
