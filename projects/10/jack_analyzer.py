@@ -711,16 +711,11 @@ class CompilationEngine:
                 self.writer.write(self.indent +
                                   '<{type}> {token} </{type}>\n'.format(token=current_token,
                                                                         type=current_token_type))
-            elif current_token == '"':
+            elif current_token_type == 'stringConstant':
 
                 self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                        type=self.tokenizer.token_type()))
-                self.tokenizer.advance()
-                # check for closing string quote, ignore it
-                self.check_required_token(self.tokenizer.symbol(), '"')
-                self.tokenizer.advance()
-
+                                  '<{type}> {token} </{type}>\n'.format(token=current_token,
+                                                                        type=current_token_type))
             # keyword constant
             elif current_token in ('true', 'false', 'null', 'this'):
                 self.writer.write(self.indent +
@@ -835,7 +830,7 @@ if __name__ == '__main__':
     import os
 
     cur_dir = os.getcwd()
-    file_path = sys.argv[1]
+    file_path = 'ArrayTest'
 
     if '.jack' in file_path:
         tokenizer = JackTokenizer(file_path)
