@@ -31,7 +31,7 @@ class SymbolTable:
         elif name in self.class_st:
             return self.class_st[name][2]
         else:
-            raise ValueError(f'{name} not defined')
+            return None
 
     def kind_of(self, name):
         if name in self.subroutine_st:
@@ -39,7 +39,7 @@ class SymbolTable:
         elif name in self.class_st:
             return self.class_st[name][1]
         else:
-            raise ValueError(f'{name} not defined')
+            return None
 
     def type_of(self, name):
         if name in self.subroutine_st:
@@ -47,7 +47,7 @@ class SymbolTable:
         elif name in self.class_st:
             return self.class_st[name][0]
         else:
-            raise ValueError(f'{name} not defined')
+            return None
 
     def var_count(self, kind):
         assert kind in ('static', 'field', 'var', 'argument')

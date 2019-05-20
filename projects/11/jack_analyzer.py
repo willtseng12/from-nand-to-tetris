@@ -1,15 +1,19 @@
 import os
-import sys
 
 from jack_tokenizer import JackTokenizer
+from symbol_table import SymbolTable
+from vm_writer import VMWriter
 
 
 class CompilationEngine:
 
-    def __init__(self, tokenizer, out_file_name):
+    def __init__(self, tokenizer, out_file_name, symbol_table, vm_writer):
         self.tokenizer = tokenizer
+        self.symbol_table = symbol_table
+        self.vm_writer = vm_writer
         self.out_file_name = out_file_name
-        self.encounter_empty_expression_list = False
+        self.if_label_index = 0
+        self.while_label_index = 0
         self.indent = ''
         self.writer = open(out_file_name, 'w')
 
@@ -17,213 +21,147 @@ class CompilationEngine:
         self.compile_class()
 
     def compile_class(self):
-        self.tokenizer.advance()
-
-        self.writer.write('<class>\n')
-        self.updent()
-
+        self.tokenizer.advance()  # first token
         self.check_required_token(self.tokenizer.key_word(), 'class')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()  # class name
 
-        self.tokenizer.advance()
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                type=self.tokenizer.token_type()))
+        self.tokenizer.advance()  # {
 
-        self.tokenizer.advance()
         self.check_required_token(self.tokenizer.key_word(), '{')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
         self.tokenizer.advance()
+
         while self.tokenizer.symbol() in ('field', 'static'):
             self.compile_class_var_dec()
+
         while self.tokenizer.key_word() in ('constructor', 'function', 'method'):
             self.compile_subroutine_dec()
 
         self.check_required_token(self.tokenizer.key_word(), '}')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
-        self.downdent()
-        self.writer.write('</class>\n')
 
     def compile_class_var_dec(self):
+        variable_kind = self.tokenizer.key_word()
+        self.tokenizer.advance()
 
-        self.writer.write(self.indent + '<classVarDec>\n')
-        self.updent()
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
+        variable_type = self.tokenizer.key_word()
         self.tokenizer.advance()
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
-        self.tokenizer.advance()
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                type=self.tokenizer.token_type()))
 
+        variable_name = self.tokenizer.identifier()
         self.tokenizer.advance()
+
+        self.symbol_table.define(name=variable_name, type=variable_type, kind=variable_kind)
 
         while self.tokenizer.symbol() == ',':
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                    type=self.tokenizer.token_type()))
+            # skip comma
             self.tokenizer.advance()
 
-        # ;
-        self.check_required_token(self.tokenizer.symbol(), ';')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
+            variable_name = self.tokenizer.identifier()
+            self.tokenizer.advance()
+
+            self.symbol_table.define(name=variable_name, type=variable_type, kind=variable_kind)
+
+        # skip ;
         self.tokenizer.advance()
-
-        self.downdent()
-        self.writer.write(self.indent + '</classVarDec>\n')
 
     def compile_subroutine_dec(self):
 
-        self.writer.write(self.indent + '<subroutineDec>\n')
-        self.updent()
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                type=self.tokenizer.token_type()))
-        self.tokenizer.advance()
-        # return type
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                type=self.tokenizer.token_type()))
-        self.tokenizer.advance()
+        self.symbol_table.start_sub_routine()
+        is_void = False
 
-        # subroutine name
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                type=self.tokenizer.token_type()))
-        self.tokenizer.advance()
+        if self.tokenizer.key_word() == 'method':
+            self.tokenizer.advance()  # class type
+            return_type = self.tokenizer.identifier()
+            self.symbol_table.define(name='this', type=return_type, kind='argument')
+            is_void = return_type == 'void'
+            self.tokenizer.advance()  # method name
+            self.tokenizer.advance()  # (
+            self.compile_parameter_list()
+            self.vm_writer.write_push(segment='argument', index=0)
+            self.vm_writer.write_pop(segment='pointer', index=0)
+            self.tokenizer.advance()  # {
 
-        self.check_required_token(self.tokenizer.key_word(), '(')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
-        self.tokenizer.advance()
+        elif self.tokenizer.key_word() == 'constructor':
+            self.tokenizer.advance()  # return type
+            is_void = self.tokenizer.identifier() == 'void'
+            self.tokenizer.advance()  # new
+            self.tokenizer.advance()  # (
+            self.compile_parameter_list()
+            num_instance_variable = self.symbol_table.var_count(kind='field')
+            self.vm_writer.write_push(segment='constant', index=num_instance_variable)
+            self.vm_writer.write_call('Memory.alloc', 1)
+            self.vm_writer.write_pop(segment='pointer', index=0)
+            self.tokenizer.advance()  # {
 
-        self.compile_parameter_list()
+        elif self.tokenizer.key_word() == 'function':
+            self.tokenizer.advance()  # return type
+            is_void = self.tokenizer.identifier() == 'void'
+            self.tokenizer.advance()  # function name
+            self.tokenizer.advance()  # (
 
-        self.check_required_token(self.tokenizer.key_word(), ')')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
-        self.tokenizer.advance()
+            self.compile_parameter_list()
+            self.tokenizer.advance()  # {
 
-        self.compile_subroutine_body()
-
-        self.downdent()
-        self.writer.write(self.indent + '</subroutineDec>\n')
+        self.compile_subroutine_body(is_void=is_void)
 
     def compile_parameter_list(self):
-        self.writer.write(self.indent + '<parameterList>\n')
-        self.updent()
+
+        self.check_required_token(self.tokenizer.symbol(), '(')
+        self.tokenizer.advance()  # param_type
+
         while self.tokenizer.symbol() != ')':
+            param_type = self.tokenizer.identifier()
+            self.tokenizer.advance()  # param name
 
-            # param type
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
-
-            # param name
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
+            param_name = self.tokenizer.identifier()
+            self.tokenizer.advance()  # , or )
+            self.symbol_table.define(name=param_name, type=param_type, kind='argument')
 
             if self.tokenizer.symbol() == ',':
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                        type=self.tokenizer.token_type()))
                 self.tokenizer.advance()
 
-        self.downdent()
-        self.writer.write(self.indent + '</parameterList>\n')
+    def compile_subroutine_body(self, is_void):
 
-    def compile_subroutine_body(self):
-        self.writer.write(self.indent + '<subroutineBody>\n')
-        self.updent()
-
-        # {
         self.check_required_token(self.tokenizer.symbol(), '{')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
-        self.tokenizer.advance()
-        while self.tokenizer.symbol() == 'var':
-            self.compile_var_dec()
-        self.compile_statements()
+        self.tokenizer.advance()  # subroutine body
 
+        while self.tokenizer.symbol() == 'var':
+            self.tokenizer.advance()  # skip 'var'
+            self.compile_var_dec()
+
+        self.compile_statements(is_void=is_void)
+
+        if is_void:
+            self.vm_writer.write_pop(segment='temp', index=0)
         # }
         self.check_required_token(self.tokenizer.symbol(), '}')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
         self.tokenizer.advance()
-
-        self.downdent()
-        self.writer.write(self.indent + '</subroutineBody>\n')
 
     def compile_var_dec(self):
 
-        self.writer.write(self.indent + '<varDec>\n')
-        self.updent()
-
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                type=self.tokenizer.token_type()))
-        self.tokenizer.advance()
-
         # local variable type
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
-
+        variable_type = self.tokenizer.identifier()
         self.tokenizer.advance()
 
         # local variable name
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                type=self.tokenizer.token_type()))
+        variable_name = self.tokenizer.identifier()
         self.tokenizer.advance()
+
+        self.symbol_table.define(name=variable_name, type=variable_type, kind='var')
 
         # potentially additional variable name
         while self.tokenizer.symbol() == ',':
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
+            self.tokenizer.advance()  # skip comma
+
+            # local variable name
+            variable_name = self.tokenizer.identifier()
             self.tokenizer.advance()
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
+
+            self.symbol_table.define(name=variable_name, type=variable_type, kind='var')
 
         # ;
         self.check_required_token(self.tokenizer.symbol(), ';')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
         self.tokenizer.advance()
 
-        self.downdent()
-        self.writer.write(self.indent + '</varDec>\n')
-
-    def compile_statements(self):
-        self.writer.write(self.indent + '<statements>\n')
-        self.updent()
+    def compile_statements(self, is_void):
         while self.tokenizer.key_word() in ('let', 'if', 'while', 'do', 'return'):
             if self.tokenizer.key_word() == 'let':
                 self.compile_let()
@@ -232,24 +170,16 @@ class CompilationEngine:
                 self.compile_do()
 
             elif self.tokenizer.key_word() == 'return':
-                self.compile_return()
+                self.compile_return(is_void=is_void)
 
             elif self.tokenizer.key_word() == 'if':
-                self.compile_if()
+                self.compile_if(is_void=is_void)
 
             elif self.tokenizer.key_word() == 'while':
-                self.compile_while()
-
-        self.downdent()
-        self.writer.write(self.indent + '</statements>\n')
+                self.compile_while(is_void=is_void)
 
     def compile_do(self):
-        self.writer.write(self.indent + '<doStatement>\n')
-        self.updent()
-
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                type=self.tokenizer.token_type()))
+        # skip do
         self.tokenizer.advance()
 
         current_token, current_token_type = self.tokenizer.identifier(), self.tokenizer.token_type()
@@ -260,265 +190,190 @@ class CompilationEngine:
 
         # ;
         self.check_required_token(self.tokenizer.symbol(), ';')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
         self.tokenizer.advance()
-
-        self.downdent()
-        self.writer.write(self.indent + '</doStatement>\n')
 
     def compile_let(self):
-        self.writer.write(self.indent + '<letStatement>\n')
-        self.updent()
 
-        # let
-        self.check_required_token(self.tokenizer.key_word(), 'let')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                type=self.tokenizer.token_type()))
+        # skip 'let'
         self.tokenizer.advance()
+        # LHS
 
         # identifier
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                type=self.tokenizer.token_type()))
+        assignee = self.tokenizer.identifier()
+        assignee_segment = self.convert_kind_to_vm_keyword(self.symbol_table.kind_of(assignee))
+        assignee_index = self.symbol_table.index_of(assignee)
+        is_array = False
+
         self.tokenizer.advance()
 
-        # array case
-        if self.tokenizer.symbol() == '[':
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                    type=self.tokenizer.token_type()))
+        if self.tokenizer.symbol() == '[':  # array case
             self.tokenizer.advance()
+            is_array = True
+            # align the array pointer
+            self.vm_writer.write_push(segment=assignee_segment, index=assignee_index)
 
             self.compile_expression()
 
             self.check_required_token(self.tokenizer.key_word(), ']')
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                    type=self.tokenizer.token_type()))
             self.tokenizer.advance()
 
-        # =
+            self.vm_writer.write_arithmetic(operator='+')
+
         self.check_required_token(self.tokenizer.key_word(), '=')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
         self.tokenizer.advance()
 
-        # rhs equality
+        # RHS
         self.compile_expression()
+
+        if is_array:
+            self.vm_writer.write_pop('temp', 0)
+            self.vm_writer.write_pop('pointer', 1)
+            self.vm_writer.write_push('temp', 0)
+            self.vm_writer.write_pop('that', 0)
+        else:
+            self.vm_writer.write_pop(assignee_segment, assignee_index)
 
         # ;
         self.check_required_token(self.tokenizer.key_word(), ';')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
         self.tokenizer.advance()
 
-        self.downdent()
-        self.writer.write(self.indent + '</letStatement>\n')
-
-    def compile_while(self):
-        self.writer.write(self.indent + '<whileStatement>\n')
-        self.updent()
-
-        # while
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                type=self.tokenizer.token_type()))
-        self.tokenizer.advance()
+    def compile_while(self, is_void):
+        self.tokenizer.advance()  # skip while
 
         # (
         self.check_required_token(self.tokenizer.key_word(), '(')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
         self.tokenizer.advance()
+
+        label1 = f'while_{self.while_label_index}'
+        self.while_label_index += 1
+        label2 = f'while_{self.while_label_index}'
+        self.while_label_index += 1
+
+        self.vm_writer.write_label(label=label1)
 
         self.compile_expression()
 
+        self.vm_writer.write_arithmetic(operator='~', is_unary=True)
+
         # )
         self.check_required_token(self.tokenizer.key_word(), ')')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
         self.tokenizer.advance()
+
+        self.vm_writer.write_if_goto(label=label2)
 
         # {
         self.check_required_token(self.tokenizer.key_word(), '{')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
         self.tokenizer.advance()
 
-        self.compile_statements()
+        self.compile_statements(is_void=is_void)
 
         # }
         self.check_required_token(self.tokenizer.key_word(), '}')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
+
+        self.vm_writer.write_goto(label=label1)
+        self.vm_writer.write_label(label=label2)
         self.tokenizer.advance()
 
-        self.downdent()
-        self.writer.write(self.indent + '</whileStatement>\n')
+    def compile_return(self, is_void):
 
-    def compile_return(self):
-        self.writer.write(self.indent + '<returnStatement>\n')
-        self.updent()
-
-        # return
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                type=self.tokenizer.token_type()))
+        # skip return
         self.tokenizer.advance()
 
         if self.tokenizer.symbol() != ';':
             self.compile_expression()
 
-            # ;
-            self.check_required_token(self.tokenizer.key_word(), ';')
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
+        if is_void:
+            self.vm_writer.write_push(segment='constant', index=0)
+        # ;
+        self.check_required_token(self.tokenizer.key_word(), ';')
+        self.tokenizer.advance()
 
-        else:
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
-            self.tokenizer.advance()
-
-        self.downdent()
-        self.writer.write(self.indent + '</returnStatement>\n')
-
-    def compile_if(self):
-        self.writer.write(self.indent + '<ifStatement>\n')
-        self.updent()
-
-        # if
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.key_word(),
-                                                                type=self.tokenizer.token_type()))
+    def compile_if(self, is_void):
         self.tokenizer.advance()
 
         self.check_required_token(self.tokenizer.key_word(), '(')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
         self.tokenizer.advance()
 
         self.compile_expression()
+        self.vm_writer.write_arithmetic(operator='~', is_unary=True)
+
+        label1 = f'if_{self.if_label_index}'
+        self.if_label_index += 1
+
+        self.vm_writer.write_if_goto(label=label1)
 
         self.check_required_token(self.tokenizer.key_word(), ')')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
         self.tokenizer.advance()
 
         # {
-
         self.check_required_token(self.tokenizer.key_word(), '{')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
         self.tokenizer.advance()
 
-        self.compile_statements()
+        self.compile_statements(is_void=is_void)
 
         self.check_required_token(self.tokenizer.key_word(), '}')
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                type=self.tokenizer.token_type()))
         self.tokenizer.advance()
+
+        label2 = f'if_{self.if_label_index}'
+        self.if_label_index += 1
+
+        self.vm_writer.write_goto(label=label2)
+
+        self.vm_writer.write_label(label=label1)
 
         # else?
         if self.tokenizer.key_word() == 'else':
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
             self.tokenizer.advance()
 
             self.check_required_token(self.tokenizer.key_word(), '{')
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
             self.tokenizer.advance()
 
-            self.compile_statements()
+            self.compile_statements(is_void=is_void)
 
             self.check_required_token(self.tokenizer.key_word(), '}')
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
             self.tokenizer.advance()
 
-        self.downdent()
-        self.writer.write(self.indent + '</ifStatement>\n')
+        self.vm_writer.write_label(label=label2)
 
     def compile_expression(self):
-
-        # case when expression list is suppose to be empty we dont want to print the expression tag
-        no_expression = self.tokenizer.symbol() == ')'
-
-        if not no_expression:
-            self.writer.write(self.indent + '<expression>\n')
-            self.updent()
-
         self.compile_term()
-
         # (operator term)*
         while self.tokenizer.symbol() in self.tokenizer.jack_operator():
-            if self.tokenizer.symbol() in ('>', '<', '&'):
-                converted_symbol = JackTokenizer.convert_operator(self.tokenizer.symbol())
-            else:
-                converted_symbol = self.tokenizer.symbol()
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=converted_symbol,
-                                                                    type=self.tokenizer.token_type()))
+            converted_symbol = self.tokenizer.symbol()
             self.tokenizer.advance()
 
             self.compile_term()
 
-        if not no_expression:
-            self.downdent()
-            self.writer.write(self.indent + '</expression>\n')
+            self.vm_writer.write_arithmetic(operator=converted_symbol, is_unary=False)
 
     def compile_term(self):
 
-        # case when expression list is empty
-        if self.tokenizer.symbol() != ')':
-            self.writer.write(self.indent + '<term>\n')
-            self.updent()
-
         # "(" expression ")" case
         if self.tokenizer.symbol() == '(':
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
             self.tokenizer.advance()
+
             self.compile_expression()
+
             self.check_required_token(self.tokenizer.key_word(), ')')
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
             self.tokenizer.advance()
 
         # unary op term case
         elif self.tokenizer.symbol() in ('-', '~'):
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
+            unary_op = self.tokenizer.symbol()
             self.tokenizer.advance()
             self.compile_term()
+            self.vm_writer.write_arithmetic(operator=unary_op, is_unary=True)
+
+        # empty expression list
+        elif self.tokenizer.symbol() == ')':
+            return
 
         # a constant, subroutine call, or array access
         # need to look ahead 1
         else:
             current_token, current_token_type = self.tokenizer.identifier(), self.tokenizer.token_type()
             self.tokenizer.advance()
+
             # subroutine call
             if self.tokenizer.symbol() in ('(', '.'):
                 self._compile_subroutine_call(previous_token=current_token,
@@ -526,158 +381,131 @@ class CompilationEngine:
 
             # array access
             elif self.tokenizer.symbol() == '[':
-                # array var name
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=current_token,
-                                                                        type=current_token_type))
 
-                # [
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                        type=self.tokenizer.token_type()))
-                self.tokenizer.advance()
+                segment = self.convert_kind_to_vm_keyword(self.symbol_table.kind_of(current_token))
+                index = self.symbol_table.index_of(current_token)
+                self.vm_writer.write_push(segment, index)
+
+                self.tokenizer.advance()  # skip [
 
                 self.compile_expression()
 
                 # ]
                 self.check_required_token(self.tokenizer.key_word(), ']')
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                        type=self.tokenizer.token_type()))
                 self.tokenizer.advance()
+
+                self.vm_writer.write_arithmetic('+')
+                self.vm_writer.write_pop('pointer', '1')
+                self.vm_writer.write_push('that', '0')  # push the value of the accessed value on stack
 
             # Integer constant
             elif JackTokenizer.is_int_value(current_token):
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=current_token,
-                                                                        type=current_token_type))
-            elif current_token == '"':
+                self.vm_writer.write_push('constant', current_token)
 
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                        type=self.tokenizer.token_type()))
-                self.tokenizer.advance()
-                # check for closing string quote, ignore it
-                self.check_required_token(self.tokenizer.symbol(), '"')
-                self.tokenizer.advance()
+            # string constant
+            elif current_token_type == 'stringConstant':
+
+                num_character = len(current_token)
+                self.vm_writer.write_push('constant', num_character)
+
+                # call string constructor
+                self.vm_writer.write_call('String.new', 1)
+
+                for i in range(num_character):
+                    self.vm_writer.write_push('constant', ord(current_token[i]))
+                    self.vm_writer.write_call('String.appendChar', 2)
+
+                # no need to advance again after string constant call
 
             # keyword constant
-            elif current_token in ('true', 'false', 'null', 'this'):
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=current_token,
-                                                                        type=current_token_type))
-            # var name
-            elif current_token != ')':
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=current_token,
-                                                                        type=current_token_type))
-            elif current_token == ')':
-                self.encounter_empty_expression_list = True
-                return
+            elif current_token == 'true':
+                self.vm_writer.write_push(segment='constant', index=1)
+                self.vm_writer.write_arithmetic('-', is_unary=True)
+            elif current_token in ('false', 'null'):
+                self.vm_writer.write_push(segment='constant', index=0)
+            elif current_token == 'this':
+                self.vm_writer.write_push(segment='pointer', index=0)
 
-        self.downdent()
-        self.writer.write(self.indent + '</term>\n')
+            # var name
+            else:
+                segment = self.convert_kind_to_vm_keyword(self.symbol_table.kind_of(current_token))
+                index = self.symbol_table.index_of(current_token)
+                self.vm_writer.write_push(segment, index)
 
     def compile_expression_list(self):
-        self.writer.write(self.indent + '<expressionList>\n')
-        self.updent()
 
+        i = 0
         self.compile_expression()
+        i += 1
 
         while self.tokenizer.symbol() == ',':
-            # evidently false if there are more
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
             self.tokenizer.advance()
             self.compile_expression()
+            i += 1
 
-        self.downdent()
-        self.writer.write(self.indent + '</expressionList>\n')
+        return i
 
     def _compile_subroutine_call(self, previous_token, previous_token_type):
-        # identifier either class name or subroutine name
-        self.writer.write(self.indent +
-                          '<{type}> {token} </{type}>\n'.format(token=previous_token,
-                                                                type=previous_token_type))
 
         # method
         if self.tokenizer.symbol() == '(':
+            self.vm_writer.write_push(segment='pointer', index=0)
+            self.tokenizer.advance()  # skip (
 
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
+            n_args = self.compile_expression_list()
+
+            self.check_required_token(self.tokenizer.symbol(), ')')
             self.tokenizer.advance()
 
-            self.compile_expression_list()
-
-            if self.encounter_empty_expression_list:
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=')',
-                                                                        type='symbol'))
-                self.encounter_empty_expression_list = False
-
-            else:
-                self.check_required_token(self.tokenizer.key_word(), ')')
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                        type=self.tokenizer.token_type()))
-                self.tokenizer.advance()
+            self.vm_writer.write_call(name=previous_token, n_args=n_args)
 
         # static method
         elif self.tokenizer.symbol() == '.':
 
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
             self.tokenizer.advance()
 
             # subroutine name
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.identifier(),
-                                                                    type=self.tokenizer.token_type()))
+            static_method_name = self.tokenizer.identifier()
             self.tokenizer.advance()
 
             self.check_required_token(self.tokenizer.key_word(), '(')
-            self.writer.write(self.indent +
-                              '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                    type=self.tokenizer.token_type()))
+            self.tokenizer.advance()  # )
+
+            n_args = self.compile_expression_list()
+
+            self.check_required_token(self.tokenizer.symbol(), ')')
             self.tokenizer.advance()
 
-            self.compile_expression_list()
-
-            if self.encounter_empty_expression_list:
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=')',
-                                                                        type='symbol'))
-                self.encounter_empty_expression_list = False
-            else:
-                self.check_required_token(self.tokenizer.key_word(), ')')
-                self.writer.write(self.indent +
-                                  '<{type}> {token} </{type}>\n'.format(token=self.tokenizer.symbol(),
-                                                                        type=self.tokenizer.token_type()))
-                self.tokenizer.advance()
+            self.vm_writer.write_call(name=f'{previous_token}.{static_method_name}', n_args=n_args)
 
     @staticmethod
     def check_required_token(token, required_token):
         if token != required_token:
             raise ValueError('except to find "{}" but found {}'.format(required_token, token))
 
-    def updent(self):
-        self.indent = self.indent + '  '
-
-    def downdent(self):
-        self.indent = self.indent[:-2]
+    @staticmethod
+    def convert_kind_to_vm_keyword(type_):
+        if type_ == 'static':
+            return 'static'
+        elif type_ == 'field':
+            return 'this'
+        elif type_ == 'var':
+            return 'local'
+        elif type_ == 'argument':
+            return 'argument'
 
 
 if __name__ == '__main__':
 
     cur_dir = os.getcwd()
-    file_path = sys.argv[1]
+    # file_path = sys.argv[1]
+    file_path = 'Square'
 
     if '.jack' in file_path:
         tokenizer = JackTokenizer(file_path)
-        compilation_engine = CompilationEngine(tokenizer, file_path.split('.')[0] + '.vm')
+        st = SymbolTable()
+        vm_writer = VMWriter(file_path)
+        compilation_engine = CompilationEngine(tokenizer, file_path.split('.')[0] + '.vm', st, vm_writer)
         compilation_engine.compile()
     else:
         files = os.listdir(file_path)
@@ -685,6 +513,8 @@ if __name__ == '__main__':
         os.chdir(file_path)
         for file in files:
             tokenizer = JackTokenizer(file)
-            compilation_engine = CompilationEngine(tokenizer, file.split('.')[0] + '.vm')
+            st = SymbolTable()
+            vm_writer = VMWriter(file.split('.')[0] + '.vm')
+            compilation_engine = CompilationEngine(tokenizer, file.split('.')[0] + '.vm', st, vm_writer)
             compilation_engine.compile()
         os.chdir(cur_dir)
