@@ -18,12 +18,14 @@ class SymbolTable:
         elif kind == 'var':
             self.subroutine_st[name] = [type, kind, self.var_index]
             self.var_index += 1
-        elif kind == 'arg':
+        elif kind == 'argument':
             self.subroutine_st[name] = [type, kind, self.argument_index]
             self.argument_index += 1
 
     def start_sub_routine(self):
         self.subroutine_st.clear()
+        self.argument_index = 0
+        self.var_index = 0
 
     def index_of(self, name):
         if name in self.subroutine_st:

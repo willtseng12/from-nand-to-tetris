@@ -1,4 +1,5 @@
 import os
+import sys
 
 from jack_tokenizer import JackTokenizer
 from symbol_table import SymbolTable
@@ -12,10 +13,9 @@ class CompilationEngine:
         self.symbol_table = symbol_table
         self.vm_writer = vm_writer
         self.out_file_name = out_file_name
+        self.out_file_prefix = out_file_name.split('.')[0]
         self.if_label_index = 0
         self.while_label_index = 0
-        self.indent = ''
-        self.writer = open(out_file_name, 'w')
 
     def compile(self):
         self.compile_class()
@@ -65,7 +65,6 @@ class CompilationEngine:
     def compile_subroutine_dec(self):
 
         self.symbol_table.start_sub_routine()
-        is_void = False
 
         if self.tokenizer.key_word() == 'method':
             self.tokenizer.advance()  # class type
@@ -73,34 +72,32 @@ class CompilationEngine:
             self.symbol_table.define(name='this', type=return_type, kind='argument')
             is_void = return_type == 'void'
             self.tokenizer.advance()  # method name
+            subroutine_name = self.tokenizer.identifier()
             self.tokenizer.advance()  # (
             self.compile_parameter_list()
-            self.vm_writer.write_push(segment='argument', index=0)
-            self.vm_writer.write_pop(segment='pointer', index=0)
             self.tokenizer.advance()  # {
+            self.compile_subroutine_body(name=subroutine_name, type='method', is_void=is_void)
 
         elif self.tokenizer.key_word() == 'constructor':
             self.tokenizer.advance()  # return type
             is_void = self.tokenizer.identifier() == 'void'
             self.tokenizer.advance()  # new
+            subroutine_name = self.tokenizer.identifier()
             self.tokenizer.advance()  # (
             self.compile_parameter_list()
-            num_instance_variable = self.symbol_table.var_count(kind='field')
-            self.vm_writer.write_push(segment='constant', index=num_instance_variable)
-            self.vm_writer.write_call('Memory.alloc', 1)
-            self.vm_writer.write_pop(segment='pointer', index=0)
             self.tokenizer.advance()  # {
+            self.compile_subroutine_body(name=subroutine_name, type='constructor', is_void=is_void)
 
         elif self.tokenizer.key_word() == 'function':
             self.tokenizer.advance()  # return type
             is_void = self.tokenizer.identifier() == 'void'
             self.tokenizer.advance()  # function name
+            subroutine_name = self.tokenizer.identifier()
             self.tokenizer.advance()  # (
 
             self.compile_parameter_list()
             self.tokenizer.advance()  # {
-
-        self.compile_subroutine_body(is_void=is_void)
+            self.compile_subroutine_body(name=subroutine_name, type='function', is_void=is_void)
 
     def compile_parameter_list(self):
 
@@ -118,7 +115,7 @@ class CompilationEngine:
             if self.tokenizer.symbol() == ',':
                 self.tokenizer.advance()
 
-    def compile_subroutine_body(self, is_void):
+    def compile_subroutine_body(self, name, type, is_void):
 
         self.check_required_token(self.tokenizer.symbol(), '{')
         self.tokenizer.advance()  # subroutine body
@@ -127,10 +124,28 @@ class CompilationEngine:
             self.tokenizer.advance()  # skip 'var'
             self.compile_var_dec()
 
+        local_var_count = self.symbol_table.var_count(kind='var')
+        if type == 'method':
+            self.vm_writer.write_subroutine(name='{subroutine_name}'
+                                            .format(subroutine_name=name),
+                                            n_locals=local_var_count + 1)
+            self.vm_writer.write_push(segment='argument', index=0)
+            self.vm_writer.write_pop(segment='pointer', index=0)
+        elif type == 'constructor':
+            self.vm_writer.write_subroutine(name='{subroutine_name}'
+                                            .format(subroutine_name=name),
+                                            n_locals=0)
+            num_instance_variable = self.symbol_table.var_count(kind='field')
+            self.vm_writer.write_push(segment='constant', index=num_instance_variable)
+            self.vm_writer.write_call('Memory.alloc', 1)
+            self.vm_writer.write_pop(segment='pointer', index=0)
+        elif type == 'function':
+            self.vm_writer.write_subroutine(name='{subroutine_name}'
+                                            .format(subroutine_name=name),
+                                            n_locals=local_var_count)
+
         self.compile_statements(is_void=is_void)
 
-        if is_void:
-            self.vm_writer.write_pop(segment='temp', index=0)
         # }
         self.check_required_token(self.tokenizer.symbol(), '}')
         self.tokenizer.advance()
@@ -192,6 +207,8 @@ class CompilationEngine:
         self.check_required_token(self.tokenizer.symbol(), ';')
         self.tokenizer.advance()
 
+        self.vm_writer.write_pop(segment='temp', index=0)  # pop void return 0
+
     def compile_let(self):
 
         # skip 'let'
@@ -210,9 +227,10 @@ class CompilationEngine:
             self.tokenizer.advance()
             is_array = True
             # align the array pointer
-            self.vm_writer.write_push(segment=assignee_segment, index=assignee_index)
+            # self.vm_writer.write_push(segment=assignee_segment, index=assignee_index)
 
             self.compile_expression()
+            self.vm_writer.write_push(segment=assignee_segment, index=assignee_index)
 
             self.check_required_token(self.tokenizer.key_word(), ']')
             self.tokenizer.advance()
@@ -244,9 +262,9 @@ class CompilationEngine:
         self.check_required_token(self.tokenizer.key_word(), '(')
         self.tokenizer.advance()
 
-        label1 = f'while_{self.while_label_index}'
+        label1 = 'while_{}'.format(self.while_label_index)
         self.while_label_index += 1
-        label2 = f'while_{self.while_label_index}'
+        label2 = 'while_{}'.format(self.while_label_index)
         self.while_label_index += 1
 
         self.vm_writer.write_label(label=label1)
@@ -287,6 +305,7 @@ class CompilationEngine:
         # ;
         self.check_required_token(self.tokenizer.key_word(), ';')
         self.tokenizer.advance()
+        self.vm_writer.write_return()
 
     def compile_if(self, is_void):
         self.tokenizer.advance()
@@ -297,7 +316,7 @@ class CompilationEngine:
         self.compile_expression()
         self.vm_writer.write_arithmetic(operator='~', is_unary=True)
 
-        label1 = f'if_{self.if_label_index}'
+        label1 = 'if_{}'.format(self.if_label_index)
         self.if_label_index += 1
 
         self.vm_writer.write_if_goto(label=label1)
@@ -314,7 +333,7 @@ class CompilationEngine:
         self.check_required_token(self.tokenizer.key_word(), '}')
         self.tokenizer.advance()
 
-        label2 = f'if_{self.if_label_index}'
+        label2 = 'if_{}'.format(self.if_label_index)
         self.if_label_index += 1
 
         self.vm_writer.write_goto(label=label2)
@@ -435,8 +454,9 @@ class CompilationEngine:
     def compile_expression_list(self):
 
         i = 0
-        self.compile_expression()
-        i += 1
+        if self.tokenizer.symbol() != ')':
+            self.compile_expression()
+            i += 1
 
         while self.tokenizer.symbol() == ',':
             self.tokenizer.advance()
@@ -457,7 +477,7 @@ class CompilationEngine:
             self.check_required_token(self.tokenizer.symbol(), ')')
             self.tokenizer.advance()
 
-            self.vm_writer.write_call(name=previous_token, n_args=n_args)
+            self.vm_writer.write_call(name=self.out_file_prefix + '.' + previous_token, n_args=n_args)
 
         # static method
         elif self.tokenizer.symbol() == '.':
@@ -476,7 +496,9 @@ class CompilationEngine:
             self.check_required_token(self.tokenizer.symbol(), ')')
             self.tokenizer.advance()
 
-            self.vm_writer.write_call(name=f'{previous_token}.{static_method_name}', n_args=n_args)
+            self.vm_writer.write_call(name='{class_name}.{function_name}'
+                                      .format(class_name=previous_token,
+                                              function_name=static_method_name), n_args=n_args)
 
     @staticmethod
     def check_required_token(token, required_token):
@@ -498,8 +520,7 @@ class CompilationEngine:
 if __name__ == '__main__':
 
     cur_dir = os.getcwd()
-    # file_path = sys.argv[1]
-    file_path = 'Square'
+    file_path = sys.argv[1]
 
     if '.jack' in file_path:
         tokenizer = JackTokenizer(file_path)
