@@ -10,25 +10,79 @@
  */ 
 class Memory {
 
+    static Array ram, freeList;
+    static int heapLength, heapNext, heapBase;
+
     /** Initializes the class. */
     function void init() {
+        let ram = 0;
+        let heapBase = 2048;
+        let initialLength = 14335;
+        let initialNext = 0;
+
+        let freeList = heapBase;
+        let freeList[0] = initialNext;
+        let freeList[1] = initialLength;
+
+        return;
     }
 
     /** Returns the RAM value at the given address. */
     function int peek(int address) {
+        return ram[address];
     }
 
     /** Sets the RAM value at the given address to the given value. */
     function void poke(int address, int value) {
+        let ram[address] = value;
+        return;
     }
 
     /** Finds an available RAM block of the given size and returns
      *  a reference to its base address. */
     function int alloc(int size) {
+        var int segmentAddress, segmentNext, segmentSize;
+        var int newSegmentAddress, newSegmentNext;
+
+        // initial setup
+        let segmentAddress = freeList;
+        let segmentNext = ram[segmentAddress];
+        let segmentSize = ram[segmentAddress + 1];
+
+        // keep going until we find a block that fits size + 2
+        while (segmentSize < size + 2) {
+            let segmentAddress = segmentNext;
+            let segmentNext = ram[segmentAddress];
+            let segmentSize = ram[segmentAddress + 1];
+        }
+
+        //update current segment size
+        let ram[segmetnAddress + 1] = segmentSize - size - 2;
+
+        // new allocated block will point to nothing
+        let newSegmentNext = 0;
+        let newSegmentAddress = segmentAddress + segmentSize - size;
+        let ram[newSegmentAddress + 1] = size;
+
+        return newSegmentAddress + 2;
     }
 
     /** De-allocates the given object (cast as an array) by making
      *  it available for future allocations. */
     function void deAlloc(Array o) {
-    }    
+
+        var int segmentAddress, segmentNext;
+
+        let segmentNext = ram[heapBase]
+
+        // keep going until we get to end of linked list
+        while (~(segmentNext = 0 )) {
+            let segmentAddress = segmentNext;
+            let segmentNext = ram[segmentAddress];
+        }
+
+        ram[segmentNext] = o;
+
+        return;
+    }
 }
