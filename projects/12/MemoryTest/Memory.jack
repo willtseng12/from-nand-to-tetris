@@ -7,13 +7,14 @@
  * This library provides two services: direct access to the computer's main
  * memory (RAM), and allocation and recycling of memory blocks. The Hack RAM
  * consists of 32,768 words, each holding a 16-bit binary number.
- */ 
+ */
 class Memory {
 
     static Array ram, freeList;
-    static int heapLength, heapNext, heapBase;
+    static int initialLength, initialNext, heapBase;
 
     /** Initializes the class. */
+
     function void init() {
         let ram = 0;
         let heapBase = 2048;
@@ -57,7 +58,7 @@ class Memory {
         }
 
         //update current segment size
-        let ram[segmetnAddress + 1] = segmentSize - size - 2;
+        let ram[segmentAddress + 1] = segmentSize - size - 2;
 
         // new allocated block will point to nothing
         let newSegmentNext = 0;
@@ -73,7 +74,7 @@ class Memory {
 
         var int segmentAddress, segmentNext;
 
-        let segmentNext = ram[heapBase]
+        let segmentNext = ram[heapBase];
 
         // keep going until we get to end of linked list
         while (~(segmentNext = 0 )) {
@@ -81,7 +82,7 @@ class Memory {
             let segmentNext = ram[segmentAddress];
         }
 
-        ram[segmentNext] = o;
+        let ram[segmentNext] = o;
 
         return;
     }
