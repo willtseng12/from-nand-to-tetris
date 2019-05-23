@@ -1,38 +1,14 @@
-function Screen.init 2
-push constant 0
-not
+function Screen.init 0
+push constant 16384
+pop static 4
+push constant 1
 pop static 0
-push constant 16
-call Array.new 1
-pop static 1
-push constant 1
-pop local 1
 push constant 0
-pop local 0
-label WHILE_EXP0
-push local 0
-push constant 16
-lt
-not
-if-goto WHILE_END0
-push local 0
-push static 1
-add
-push local 1
-pop temp 0
-pop pointer 1
-push temp 0
-pop that 0
-push local 1
-push local 1
-add
-pop local 1
-push local 0
-push constant 1
-add
-pop local 0
-goto WHILE_EXP0
-label WHILE_END0
+pop static 1
+push static 0
+pop static 2
+push constant 8192
+pop static 3
 push constant 0
 return
 function Screen.clearScreen 1
@@ -44,10 +20,10 @@ push constant 8192
 lt
 not
 if-goto WHILE_END0
-push constant 16384
+push static 4
 push local 0
 add
-push constant 0
+push static 1
 call Memory.poke 2
 pop temp 0
 goto WHILE_EXP0
@@ -56,11 +32,11 @@ push constant 0
 return
 function Screen.setColor 0
 push argument 0
-pop static 0
+pop static 2
 push constant 0
 return
 function Screen.drawPixel 4
-push constant 16384
+push static 4
 push argument 1
 push constant 32
 call Math.multiply 2
@@ -71,28 +47,21 @@ call Math.divide 2
 add
 pop local 0
 push argument 0
-push argument 0
 push constant 16
-call Math.divide 2
-push constant 16
-call Math.multiply 2
-sub
-pop local 1
+call Math.mod 2
+pop local 2
 push local 0
 call Memory.peek 1
-pop local 2
-push local 1
-push static 1
-add
-pop pointer 1
-push that 0
+pop local 1
+push local 2
+call Math.twoToThePower 1
 pop local 3
-push static 0
+push static 2
 if-goto IF_TRUE0
 goto IF_FALSE0
 label IF_TRUE0
 push local 0
-push local 2
+push local 1
 push local 3
 or
 call Memory.poke 2
@@ -100,7 +69,7 @@ pop temp 0
 goto IF_END0
 label IF_FALSE0
 push local 0
-push local 2
+push local 1
 push local 3
 not
 and
@@ -124,7 +93,7 @@ pop temp 0
 push constant 0
 return
 label IF_FALSE0
-push static 0
+push static 2
 if-goto IF_TRUE1
 goto IF_FALSE1
 label IF_TRUE1
@@ -211,95 +180,95 @@ push argument 2
 push argument 0
 sub
 call Math.abs 1
-pop local 0
+pop local 2
 push argument 2
 push argument 0
 lt
-pop local 7
+pop local 0
 push argument 3
 push argument 1
 sub
 call Math.abs 1
-pop local 1
+pop local 3
 push argument 3
 push argument 1
 lt
+pop local 1
+push constant 0
+pop local 4
+push constant 0
+pop local 5
+push constant 0
 pop local 8
-push constant 0
-pop local 2
-push constant 0
-pop local 3
-push constant 0
-pop local 6
 label WHILE_EXP0
+push local 4
 push local 2
-push local 0
 gt
+push local 5
 push local 3
-push local 1
 gt
 or
 not
 not
 if-goto WHILE_END0
-push local 7
+push local 0
 if-goto IF_TRUE1
 goto IF_FALSE1
 label IF_TRUE1
 push argument 0
-push local 2
+push local 4
 sub
-pop local 4
+pop local 6
 goto IF_END1
 label IF_FALSE1
 push argument 0
-push local 2
+push local 4
 add
-pop local 4
+pop local 6
 label IF_END1
-push local 8
+push local 1
 if-goto IF_TRUE2
 goto IF_FALSE2
 label IF_TRUE2
 push argument 1
-push local 3
+push local 5
 sub
-pop local 5
+pop local 7
 goto IF_END2
 label IF_FALSE2
 push argument 1
-push local 3
-add
-pop local 5
-label IF_END2
-push local 4
 push local 5
+add
+pop local 7
+label IF_END2
+push local 6
+push local 7
 call Screen.drawPixel 2
 pop temp 0
-push local 6
+push local 8
 push constant 0
 lt
 if-goto IF_TRUE3
 goto IF_FALSE3
 label IF_TRUE3
-push local 2
+push local 4
 push constant 1
 add
-pop local 2
-push local 6
-push local 1
+pop local 4
+push local 8
+push local 3
 add
-pop local 6
+pop local 8
 goto IF_END3
 label IF_FALSE3
-push local 3
+push local 5
 push constant 1
 add
-pop local 3
-push local 6
-push local 0
+pop local 5
+push local 8
+push local 2
 sub
-pop local 6
+pop local 8
 label IF_END3
 goto WHILE_EXP0
 label WHILE_END0
@@ -332,7 +301,7 @@ function Screen.drawCircle 3
 push argument 2
 push argument 2
 call Math.multiply 2
-pop local 0
+pop local 2
 push argument 2
 neg
 pop local 1
@@ -343,18 +312,18 @@ gt
 not
 not
 if-goto WHILE_END0
-push local 0
+push local 2
 push local 1
 push local 1
 call Math.multiply 2
 sub
 call Math.sqrt 1
-pop local 2
+pop local 0
 push argument 0
-push local 2
+push local 0
 sub
 push argument 0
-push local 2
+push local 0
 add
 push argument 1
 push local 1

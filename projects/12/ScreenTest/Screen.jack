@@ -42,23 +42,28 @@ class Screen {
 
     /** Draws the (x,y) pixel, using the current color. */
     function void drawPixel(int x, int y) {
+     // The screen has dimensions 512x256 and starts at memory location 16384. Each pixel is
+     // represented by one bit. This means each row contains 32 words.
+
         var int address;
-        var int bits, position, mask;
+        var int word, bit, mask;
 
-        let address = (y * 32) + (x / 16);
+        let address = screenAddress + (y * 32) + (x / 16);
+        let bit = Math.mod(x, 16);
 
-        let bits = Memory.peek(screenAddress + address);
-        let position = Math.mod(x, 16);
-        let mask = Math.twoToThePower(position);
 
-        if (color = blackPixel) {
-            do Memory.poke(screenAddress + address, bits | mask);
+        let word = Memory.peek(address);
+        let mask = Math.twoToThePower(bit);
+
+        if (color) {
+            do Memory.poke(address, word | mask);
         } else {
-            do Memory.poke(screenAddress + address, bits & (~mask));
+            do Memory.poke(address, word & (~mask));
         }
         return;
     }
 
+    // Draws a horizontal line from (x1, y) to (x2, y).
     function void drawHorizontalLine(int x1, int x2, int y) {
         var int wordColor, x, xDiv16;
 
@@ -67,7 +72,7 @@ class Screen {
             return;
         }
 
-        if (black) {
+        if (color) {
             let wordColor = -1;
         } else {
             let wordColor = 0;
@@ -92,10 +97,10 @@ class Screen {
 
     /** Draws a line from (x1, y1) to (x2, y2). */
     function void drawLine(int x1, int y1, int x2, int y2) {
-        var int dx, dy, a, b, x, y, adyMinusbdx;
         var boolean dxNegative, dyNegative;
+        var int dx, dy, a, b, x, y, adyMinusbdx;
 
-        if (y1 = y2) {
+        if (y1 = y2) { // always draw from left to right
             do Screen.drawHorizontalLine(x1, x2, y1);
             return;
         }
@@ -128,34 +133,32 @@ class Screen {
                 let adyMinusbdx = adyMinusbdx - dx;
             }
         }
-
         return;
     }
 
     /** Draws a filled rectangle whose top left corner is (x1, y1)
      * and bottom right corner is (x2,y2), using the current color. */
     function void drawRectangle(int x1, int y1, int x2, int y2) {
-        var int y;
+        var int i;
+        let i = y1;
 
-        let y = y1;
-
-        while (~(y < y2)) {
-            do Screen.drawHorizontalLine(y, x1, x2);
-            let y = y - 1;
+        while (~(i > y2)) {
+            do Screen.drawHorizontalLine(x1, x2, i);
+            let i = i + 1;
         }
+
         return;
     }
 
     /** Draws a filled circle of radius r<=181 around (x,y), using the current color. */
     function void drawCircle(int x, int y, int r) {
-        var int dx, dy;
-        var int rSquared;
+        var int dx, dy, rSquared;
 
-        let dy = -r;
         let rSquared = r * r;
+        let dy = -r;
         while ( ~(dy > r) ) {
             let dx = Math.sqrt(rSquared - (dy * dy));
-            do Screen.drawHorizontalLine(y + dy, x - dx, x + dx);
+            do Screen.drawHorizontalLine(x - dx, x + dx, y + dy);
             let dy = dy + 1;
         }
         return;

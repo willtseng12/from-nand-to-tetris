@@ -75,6 +75,7 @@ class Math {
         return sum;
     }
 
+
     /** Returns the integer part of x/y.
      *  When a Jack compiler detects the multiplication operator '/' in the
      *  program's code, it handles it by invoking this method. In other words,
@@ -82,20 +83,23 @@ class Math {
      */
     function int divide(int x, int y) {
         var boolean negX, negY;
-        var int result, q;
+        var int result, q, qy, xAbs, yAbs;
 
         let negX = x < 0;
         let negY = y < 0;
-        let x = Math.abs(x);
-        let y = Math.abs(y);
 
-        if (y > x) {
+
+        if ((y > x) | (y < 0)) {
             return 0;
         }
 
-        let q = Math.divide(x, y + y);
+        let xAbs = Math.abs(x);
+        let yAbs = Math.abs(y);
 
-        if (x - (2 * q * y) < y) {
+        let q = Math.divide(xAbs, yAbs + yAbs);
+        let qy = q * y;
+
+        if (x - (qy + qy) < y) {
             let result =  q + q;
         } else {
             let result = q + q + 1;
