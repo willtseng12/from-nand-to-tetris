@@ -77,7 +77,7 @@ class Output {
         do Output.create(64,30,51,51,59,59,59,27,3,30,0,0);  // @
         do Output.create(63,30,51,51,24,12,12,0,12,12,0,0);  // ?
 
-        do Output.create(65,0,0,0,0,0,0,0,0,0,0,0);          // A ** TO BE FILLED **
+        do Output.create(65,12,30,51,51,63,51,51,51,51,0,0); // A ** TO BE FILLED **
         do Output.create(66,31,51,51,51,31,51,51,51,31,0,0); // B
         do Output.create(67,28,54,35,3,3,3,35,54,28,0,0);    // C
         do Output.create(68,15,27,51,51,51,51,51,27,15,0,0); // D
@@ -182,8 +182,8 @@ class Output {
     /** Moves the cursor to the j-th column of the i-th row,
      *  and erases the character displayed there. */
     function void moveCursor(int i, int j) {
-        let cursorRow = Math.mod(i + (j / 64), 23);
-        let cursorCol = Math.mod(j, 64);
+        let cursorY = Math.mod(i + (j / 64), 23);
+        let cursorX = Math.mod(j, 64);
         do Output.overwriteCurrentChar(32);
         return;
     }
@@ -198,7 +198,7 @@ class Output {
 
     // i-th bit of x.
     function int bit(int x, int i) {
-        if ((Math.powersOfTwo[i] & x) = 0) {
+        if ((Math.twoToThePower(i) & x) = 0) {
             return 0;
         }
 
@@ -212,8 +212,8 @@ class Output {
 
         let map = Output.getMap(c);
 
-        let x = cursorCol * 8;
-        let y = cursorRow * 11;
+        let x = cursorX * 8;
+        let y = cursorY * 11;
         let dy = 0;
 
         while (dy < 11) {
@@ -251,20 +251,19 @@ class Output {
         var String string;
         let string = String.new(7); // max number = -32768 in 2's complement
         do string.setInt(i);
-        do Output.printString(str);
-        do string.dispose();  // no longer need it
+        do Output.printString(string);
         return;
     }
 
     /** Advances the cursor to the beginning of the next line. */
     function void println() {
-        do Output.moveCursor(cursorRow + 1, 0);
+        do Output.moveCursor(cursorY + 1, 0);
         return;
     }
 
     /** Moves the cursor one column back. */
     function void backSpace() {
-        do Output.moveCursor(cursorRow, cursorCol - 1);
+        do Output.moveCursor(cursorY, cursorX - 1);
         return;
     }
 }
