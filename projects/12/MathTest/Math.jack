@@ -79,38 +79,37 @@ class Math {
     /** Returns the integer part of x/y.
      *  When a Jack compiler detects the multiplication operator '/' in the
      *  program's code, it handles it by invoking this method. In other words,
-     *  the Jack expressions x/y and divide(x,y) return the same value.
-     */
+     *  the Jack expressions x/y and divide(x,y) return the same value.*/
     function int divide(int x, int y) {
-        var boolean negX, negY;
-        var int result, q, qy, xAbs, yAbs;
+        var int result, xAbs, yAbs;
 
-        let negX = x < 0;
-        let negY = y < 0;
+        let xAbs = Math.abs(x);
+        let yAbs = Math.abs(y);
 
+        let result = Math.divideRec(xAbs, yAbs);
+
+        if (((y > 0) & (x > 0)) | ((y < 0) & (x < 0))) {
+            return result;
+        }
+
+            return -result;
+        }
+
+    function int divideRec(int x, int y) {
+        var int q, qy;
 
         if ((y > x) | (y < 0)) {
             return 0;
         }
 
-        let xAbs = Math.abs(x);
-        let yAbs = Math.abs(y);
-
-        let q = Math.divide(xAbs, yAbs + yAbs);
+        let q = Math.divideRec(x, y + y);
         let qy = q * y;
 
-        if (x - (qy + qy) < y) {
-            let result =  q + q;
-        } else {
-            let result = q + q + 1;
+        if ((x - (qy + qy)) < y) {
+            return q + q;
         }
 
-        if (negX = negY) {
-            return result;
-        } else {
-            return -result;
-        }
-
+        return q + q + 1;
     }
 
     /** Returns the integer part of the square root of x. */
